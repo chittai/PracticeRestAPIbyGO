@@ -4,6 +4,10 @@ import(
 	"fmt"
 	"time"
 	"os"
+	"net/http"
+	"log"
+
+	"github.com/gorilla/mux"
 
 	"github.com/aws/aws-sdk-go/aws"
     "github.com/aws/aws-sdk-go/aws/credentials"
@@ -19,9 +23,7 @@ type User struct {
 	CreatedTime	time.Time	`dynamo:"created_time"`
 }
 
-
-
-func main(){
+func CreateUser(w http.ResponseWriter, r *http.Request){
 	godotenv.Load("./envfiles/develop.env")
 
 	var apikey = os.Getenv("APIKEY")
@@ -37,13 +39,20 @@ func main(){
 	var table = db.Table("Test")
 
 	guid := xid.New()
-	name := "taro"
-
+	name := r.URL.Query().Get("name")
+	
 	u := User{UserID: guid, Name: name, CreatedTime: time.Now().UTC()}
 	fmt.Println(u)
-
 	if err := table.Put(u).Run(); err != nil {
 		fmt.Println("err")
 		panic(err.Error())
 	}
 }
+
+func main(){
+	router := mux.NewRouter()
+	fmt.Println("Listening 8000 ...")
+	router.HandleFunc("/users", CreateUser).Methods("POST")
+	log.Fatal(http.ListenAndServe(":8000", router))
+}
+
