@@ -47,8 +47,6 @@ func CreateSession() {
 func CreateUser(w http.ResponseWriter, r *http.Request){
 	godotenv.Load("./envfiles/develop.env")
 
-	CreateSession()
-
 	guid := xid.New()
 	name := r.URL.Query().Get("name")
 	
@@ -75,10 +73,50 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
+func GetUser(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	userID := params["id"]
+
+	var user []User
+	err := table.Get("user_id", userID).All(&user)
+	if err != nil {
+		fmt.Println("err")
+		panic(err.Error())
+	}
+	fmt.Println(user)
+	json.NewEncoder(w).Encode(user)
+}
+
+func UpdateUser(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	q := r.URL.Query().Get("name")
+
+	userID := params["id"]
+
+	err := table.Update("user_id", userID).Set("name", q).Run()
+	if err != nil {
+		fmt.Println("err")
+		panic(err.Error())
+	}
+}
+
+func DeleteUser(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	userID := params["id"]
+	table.Delete("user_id", userID).Run()
+}
+
+
 func main(){
+
+	CreateSession()
 	router := mux.NewRouter()
 	fmt.Println("Listening 8000 ...")
 	router.HandleFunc("/users", CreateUser).Methods("POST")
 	router.HandleFunc("/users", GetUsers).Methods("GET")
+	router.HandleFunc("/users/{id}", GetUser).Methods("GET")
+	router.HandleFunc("/users/{id}", UpdateUser).Methods("POST")
+	router.HandleFunc("/users/{id}", DeleteUser).Methods("DELETE")
+
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
